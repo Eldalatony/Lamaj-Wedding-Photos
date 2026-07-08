@@ -1,122 +1,68 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React, { useState } from 'react';
+import { supabase } from './supabaseClient';
+
+const styles = {
+  container: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#fff5f5', fontFamily: 'sans-serif', padding: '20px', textAlign: 'center' },
+  card: { backgroundColor: '#ffffff', padding: '30px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', maxWidth: '400px', width: '100%' },
+  title: { color: '#d63031', marginBottom: '10px', fontSize: '28px', fontWeight: 'bold' },
+  subtitle: { color: '#636e72', marginBottom: '30px', fontSize: '15px', lineHeight: '1.5' },
+  uploadButton: { backgroundColor: '#d63031', color: 'white', padding: '16px 32px', borderRadius: '50px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 6px 20px rgba(214,48,49,0.3)', display: 'inline-block' },
+  statusText: { marginTop: '25px', fontSize: '16px', color: '#2d3436', fontWeight: '500' }
+};
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [uploading, setUploading] = useState(false);
+  const [status, setStatus] = useState('');
+
+  const handleCameraUpload = async (e) => {
+    try {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      setUploading(true);
+      setStatus('Uploading your memory... 📸');
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+
+      // Hna m2flenha capital exact zay el-Supabase dashboard 3andak!
+      const { data, error } = await supabase.storage
+        .from('wedding-photos')
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      setStatus('Uploaded Successfully! 🎉 Thank you!');
+    } catch (error) {
+      console.error(error);
+      setStatus('Upload failed, please try again. ❌');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <h1 style={styles.title}>Wedding Album 💍</h1>
+        <p style={styles.subtitle}>Capture a beautiful memory live and share it directly with the bride and groom!</p>
 
-      <div className="ticks"></div>
+        <label style={{ ...styles.uploadButton, opacity: uploading ? 0.6 : 1 }}>
+          {uploading ? 'Uploading...' : '📸 Take a Photo'}
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleCameraUpload}
+            disabled={uploading}
+            style={{ display: 'none' }}
+          />
+        </label>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {status && <p style={styles.statusText}>{status}</p>}
+      </div>
+    </div>
+  );
 }
 
-export default App
+export default App;
