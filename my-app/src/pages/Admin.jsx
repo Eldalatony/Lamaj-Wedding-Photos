@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { listPhotos, getFavorites, addFavorite, removeFavorite, deletePhoto, favKey } from '../supabaseClient';
+import { listPhotos, getFavorites, addFavorite, removeFavorite, deletePhoto, favKey, fetchMessages, deleteMessage } from '../supabaseClient';
 import { YELLOW, BLUE, CREAM, PAGE_BACKGROUND } from '../theme';
+import ThumbImage from '../ThumbImage';
 
-// El-password mawgood fel-.env file
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
 
-// Benrender el-sowar 3ala batches 3ashan el-page teftah bsor3a
 const BATCH_SIZE = 60;
 
 const styles = {
@@ -48,6 +47,8 @@ const styles = {
     marginBottom: '16px',
     boxSizing: 'border-box',
     outline: 'none',
+    backgroundColor: 'white',
+    color: '#1f2937',
   },
   loginButton: {
     backgroundColor: YELLOW,
@@ -72,7 +73,6 @@ const styles = {
     borderRadius: '3px',
     boxShadow: '0 6px 16px rgba(37,99,235,0.25)',
     textAlign: 'center',
-    // El-browser byeskip el-render lel-cards elly barra el-shasha
     contentVisibility: 'auto',
     containIntrinsicSize: '180px 220px',
   },
@@ -100,6 +100,37 @@ const styles = {
   },
   empty: { textAlign: 'center', color: BLUE, fontWeight: '600', marginTop: '60px', fontSize: '17px' },
   error: { color: '#e74c3c', fontWeight: '600', marginTop: '10px' },
+  viewToggle: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '10px',
+    marginBottom: '20px',
+  },
+  notesGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+    gap: '20px',
+    maxWidth: '1000px',
+    margin: '0 auto',
+  },
+  noteCard: {
+    position: 'relative',
+    backgroundColor: CREAM,
+    padding: '20px',
+    borderRadius: '10px',
+    border: `2px solid ${BLUE}`,
+    boxShadow: '0 6px 16px rgba(37,99,235,0.25)',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  noteText: {
+    color: BLUE,
+    fontSize: '16px',
+    lineHeight: '1.6',
+    margin: '0 0 12px 0',
+    whiteSpace: 'pre-wrap',
+    flexGrow: 1,
+  },
   toolbar: {
     display: 'flex',
     flexWrap: 'wrap',
@@ -161,15 +192,19 @@ function Admin() {
   const [bulkStatus, setBulkStatus] = useState('');
   const [bulkBusy, setBulkBusy] = useState(false);
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
+  const [view, setView] = useState('photos');
+  const [messages, setMessages] = useState([]);
+  const [busyMsgId, setBusyMsgId] = useState(null);
   const sentinelRef = useRef(null);
 
   useEffect(() => {
     if (!authed) return;
     (async () => {
       try {
-        const [ph, favs] = await Promise.all([listPhotos(), getFavorites()]);
+        const [ph, favs, msgs] = await Promise.all([listPhotos(), getFavorites(), fetchMessages()]);
         setPhotos(ph);
         setFavSet(new Set(favs.map(favKey)));
+        setMessages(msgs);
       } catch (err) {
         console.error(err);
       } finally {
@@ -226,6 +261,20 @@ function Admin() {
     }
   };
 
+  const handleDeleteMessage = async (msg) => {
+    if (!window.confirm('Delete this note permanently?')) return;
+    setBusyMsgId(msg.id);
+    try {
+      await deleteMessage(msg.id);
+      setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+    } catch (err) {
+      console.error(err);
+      alert('Delete failed, try again.');
+    } finally {
+      setBusyMsgId(null);
+    }
+  };
+
   const toggleSelected = (photo) => {
     const key = favKey(photo);
     setSelected((prev) => {
@@ -245,7 +294,6 @@ function Admin() {
   const selectedPhotos = photos.filter((p) => selected.has(favKey(p)));
   const hasMore = visibleCount < photos.length;
 
-  // Lamma el-sentinel yeban ta7t, benzawwed batch kaman
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -282,7 +330,6 @@ function Admin() {
     else setSelected(new Set());
   };
 
-  // Beynazzel kol sora lewa7daha (el-browser hayes2al marra wa7da 3an multiple downloads)
   const handleBulkDownload = async () => {
     if (selectedPhotos.length === 0) return;
 
@@ -337,7 +384,23 @@ function Admin() {
         <a href="#" style={styles.backButton}>← Back</a>
       </div>
 
-      {!loading && photos.length > 0 && (
+      <div style={styles.viewToggle}>
+        {['photos', 'notes'].map((v) => (
+          <button
+            key={v}
+            style={{
+              ...styles.toolbarButton,
+              backgroundColor: view === v ? BLUE : 'white',
+              color: view === v ? 'white' : BLUE,
+            }}
+            onClick={() => setView(v)}
+          >
+            {v === 'photos' ? `Photos (${photos.length})` : `Notes (${messages.length})`}
+          </button>
+        ))}
+      </div>
+
+      {view === 'photos' && !loading && photos.length > 0 && (
         <div style={styles.toolbar}>
           {!selectMode ? (
             <button style={styles.toolbarButton} onClick={() => setSelectMode(true)}>Select photos</button>
@@ -374,7 +437,30 @@ function Admin() {
         </div>
       )}
 
-      {loading ? (
+      {view === 'notes' && (
+        loading ? (
+          <p style={styles.empty}>Loading notes...</p>
+        ) : messages.length === 0 ? (
+          <p style={styles.empty}>No notes yet.</p>
+        ) : (
+          <div style={styles.notesGrid}>
+            {messages.map((msg) => (
+              <div key={msg.id} style={styles.noteCard}>
+                <p style={styles.noteText}>{msg.text}</p>
+                <button
+                  onClick={() => handleDeleteMessage(msg)}
+                  disabled={busyMsgId === msg.id}
+                  style={{ ...styles.deleteButton, flex: 'none', padding: '8px 16px', opacity: busyMsgId === msg.id ? 0.5 : 1 }}
+                >
+                  {busyMsgId === msg.id ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {view === 'photos' && (loading ? (
         <p style={styles.empty}>Loading photos...</p>
       ) : photos.length === 0 ? (
         <p style={styles.empty}>No photos yet.</p>
@@ -397,7 +483,7 @@ function Admin() {
                   outline: isSelected ? `3px solid ${BLUE}` : 'none',
                 }}
               >
-                <img src={photo.url} alt="" loading="lazy" style={styles.img} />
+                <ThumbImage photo={photo} style={styles.img} />
                 {selectMode && isSelected && <div style={styles.checkmark}>✓</div>}
                 {!selectMode && (
                   <div style={styles.actions}>
@@ -428,7 +514,7 @@ function Admin() {
         </div>
         {hasMore && <div ref={sentinelRef} style={{ height: '1px' }} />}
         </>
-      )}
+      ))}
     </div>
   );
 }

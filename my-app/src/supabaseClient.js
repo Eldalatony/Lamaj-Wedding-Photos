@@ -1,40 +1,77 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Account 1
 const supabaseA = createClient(
   import.meta.env.VITE_SUPABASE_URL_A,
   import.meta.env.VITE_SUPABASE_KEY_A
 );
 
-// Account 2
 const supabaseB = createClient(
   import.meta.env.VITE_SUPABASE_URL_B,
   import.meta.env.VITE_SUPABASE_KEY_B
 );
 
-// Kol target leeh client + esm el-bucket beta3o
 const storageTargets = [
   { client: supabaseA, bucket: import.meta.env.VITE_SUPABASE_BUCKET_A },
   { client: supabaseB, bucket: import.meta.env.VITE_SUPABASE_BUCKET_B },
 ];
 
-// Byekhtar bucket 3ashwa2y 3ashan yewazza3 el-storage wel-bandwidth,
-// w law fashal (masalan el-bucket etmala) byegarrab el-tany automatic
+const THUMB_MAX_SIZE = 1024;
+const THUMB_QUALITY = 0.85;
+
+async function makeThumbnail(file) {
+  const probe = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  const scale = THUMB_MAX_SIZE / Math.max(probe.width, probe.height);
+  if (scale >= 1) {
+    probe.close();
+    return null;
+  }
+  const width = Math.round(probe.width * scale);
+  const height = Math.round(probe.height * scale);
+  probe.close();
+
+  const bitmap = await createImageBitmap(file, {
+    imageOrientation: 'from-image',
+    resizeWidth: width,
+    resizeHeight: height,
+    resizeQuality: 'high',
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext('2d').drawImage(bitmap, 0, 0);
+  bitmap.close();
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error('toBlob failed'))),
+      'image/jpeg',
+      THUMB_QUALITY
+    );
+  });
+}
+
 export async function uploadPhoto(fileName, file) {
+  const thumb = await makeThumbnail(file).catch(() => null);
+
   const first = Math.floor(Math.random() * storageTargets.length);
   const order = [storageTargets[first], storageTargets[1 - first]];
 
   let lastError = null;
   for (const { client, bucket } of order) {
     const { data, error } = await client.storage.from(bucket).upload(fileName, file);
-    if (!error) return data;
+    if (!error) {
+      if (thumb) {
+        await client.storage
+          .from(bucket)
+          .upload(`thumbs/${fileName}`, thumb, { contentType: 'image/jpeg' });
+      }
+      return data;
+    }
     lastError = error;
   }
   throw lastError;
 }
 
-// Bygib el-sowar men el-2 buckets, kol sora ma3aha esm el-bucket beta3ha
-// 3ashan ne3raf nemsa7ha aw ne3melha favorite ba3den
 export async function listPhotos() {
   const results = await Promise.all(
     storageTargets.map(async ({ client, bucket }) => {
@@ -42,13 +79,13 @@ export async function listPhotos() {
         .from(bucket)
         .list('', { limit: 1000, sortBy: { column: 'created_at', order: 'desc' } });
       if (error || !data) return [];
-      // f.id == null ma3naha folder (zay thumbs/ el-adima) mesh file
       return data
         .filter((f) => f.name && !f.name.startsWith('.') && f.id)
         .map((f) => ({
           bucket,
           name: f.name,
           url: client.storage.from(bucket).getPublicUrl(f.name).data.publicUrl,
+          thumbUrl: client.storage.from(bucket).getPublicUrl(`thumbs/${f.name}`).data.publicUrl,
           createdAt: f.created_at,
         }));
     })
@@ -56,7 +93,6 @@ export async function listPhotos() {
   return results.flat().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
-// El-favorites metkhazzena f-table wa7ed f-project A (bucket + esm el-file)
 export async function getFavorites() {
   const { data, error } = await supabaseA.from('favorites').select('bucket,name');
   if (error) {
@@ -86,34 +122,31 @@ export async function removeFavorite(photo) {
 
 export async function deletePhoto(photo) {
   const target = storageTargets.find((t) => t.bucket === photo.bucket);
-  // Bnemsa7 el-thumb ma3aha; law mesh mawgooda Supabase betetgahalha 3ady
   const { error } = await target.client.storage.from(photo.bucket).remove([photo.name, `thumbs/${photo.name}`]);
   if (error) throw error;
-  // Law kanet favorite, nemsa7ha men el-table kaman
   await supabaseA.from('favorites').delete().eq('bucket', photo.bucket).eq('name', photo.name);
 }
 
-// ==========================================
-// ----- إضافات دفتر الزوار (Messages) -----
-// ==========================================
-
-// إضافة رسالة جديدة للعروسين
 export async function addMessage(messageText) {
   const { data, error } = await supabaseA
     .from('messages')
     .insert([{ text: messageText }]);
-  
+
   if (error) throw error;
   return data;
 }
 
-// جلب كل الرسايل لعرضها في صفحة ViewMessages
+export async function deleteMessage(id) {
+  const { error } = await supabaseA.from('messages').delete().eq('id', id);
+  if (error) throw error;
+}
+
 export async function fetchMessages() {
   const { data, error } = await supabaseA
     .from('messages')
-    .select('*') // <-- السطر ده اللي كان ناقص
-    .order('created_at', { ascending: false }); // ترتيب من الأحدث للأقدم
-    
+    .select('*')
+    .order('created_at', { ascending: false });
+
   if (error) throw error;
   return data;
 }

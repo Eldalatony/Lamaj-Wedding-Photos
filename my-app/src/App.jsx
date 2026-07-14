@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { uploadPhoto, listPhotos, getFavorites, favKey } from './supabaseClient';
 import { YELLOW, BLUE, CREAM, PAGE_BACKGROUND } from './theme';
+import ThumbImage from './ThumbImage';
 import Gallery from './pages/Gallery';
 import Admin from './pages/Admin';
 import WriteMessage from './pages/WriteMessage';
@@ -51,7 +52,6 @@ const styles = {
     color: BLUE,
     margin: '0 0 8px 0',
   },
-  // Frame zay el-invitation: cream arch b-double blue border
   card: {
     pointerEvents: 'auto',
     backgroundColor: CREAM,
@@ -100,8 +100,6 @@ const styles = {
   statusText: { marginTop: '22px', fontSize: '16px', color: BLUE, fontWeight: '600' },
 };
 
-// Grid mel-slots metghattya el-shasha kollaha, ma3 jitter w meil 3ashwa2y zay el-polaroids.
-// El-frames akbar men el-cells shwayya 3ashan yerkabo fo2 ba3d bel-atraf bas
 const COLS = 4;
 const ROWS = 7;
 function makeSlots() {
@@ -143,7 +141,6 @@ function Home() {
     })();
   }, [refreshPhotos]);
 
-  // El-frames beto3 el-home yewarru el-favorites bas
   const wallPhotos = useMemo(
     () => photos.filter((p) => favSet.has(favKey(p))),
     [photos, favSet]
@@ -194,7 +191,7 @@ function Home() {
             }}
           >
             {wallPhotos.length > 0 ? (
-              <img src={wallPhotos[i % wallPhotos.length].url} alt="" loading="lazy" style={styles.polaroidImg} />
+              <ThumbImage photo={wallPhotos[i % wallPhotos.length]} style={styles.polaroidImg} />
             ) : (
               <div style={styles.polaroidImg} />
             )}
@@ -235,12 +232,10 @@ function Home() {
           <br />
           <a href="#all" style={styles.viewAllButton}>View All Photos</a>
 
-         {/* ----- الزراير الجديدة للرسايل ----- */}
           <div style={{ marginTop: '20px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
             <a href="#write" style={{...styles.uploadButton, width: '45%', fontSize: '14px', padding: '10px', margin: '0', textAlign: 'center', boxSizing: 'border-box', border: '2px solid transparent'}}>Write Note</a>
             <a href="#messages" style={{...styles.galleryButton, width: '45%', fontSize: '14px', padding: '10px', margin: '0', textAlign: 'center', boxSizing: 'border-box'}}>View Notes</a>
           </div>
-          {/* ---------------------------------- */}
 
           {status && <p style={styles.statusText}>{status}</p>}
         </div>
