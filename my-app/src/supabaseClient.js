@@ -92,3 +92,28 @@ export async function deletePhoto(photo) {
   // Law kanet favorite, nemsa7ha men el-table kaman
   await supabaseA.from('favorites').delete().eq('bucket', photo.bucket).eq('name', photo.name);
 }
+
+// ==========================================
+// ----- إضافات دفتر الزوار (Messages) -----
+// ==========================================
+
+// إضافة رسالة جديدة للعروسين
+export async function addMessage(messageText) {
+  const { data, error } = await supabaseA
+    .from('messages')
+    .insert([{ text: messageText }]);
+  
+  if (error) throw error;
+  return data;
+}
+
+// جلب كل الرسايل لعرضها في صفحة ViewMessages
+export async function fetchMessages() {
+  const { data, error } = await supabaseA
+    .from('messages')
+    .select('*') // <-- السطر ده اللي كان ناقص
+    .order('created_at', { ascending: false }); // ترتيب من الأحدث للأقدم
+    
+  if (error) throw error;
+  return data;
+}

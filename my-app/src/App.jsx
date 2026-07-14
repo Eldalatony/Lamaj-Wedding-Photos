@@ -3,6 +3,8 @@ import { uploadPhoto, listPhotos, getFavorites, favKey } from './supabaseClient'
 import { YELLOW, BLUE, CREAM, PAGE_BACKGROUND } from './theme';
 import Gallery from './pages/Gallery';
 import Admin from './pages/Admin';
+import WriteMessage from './pages/WriteMessage';
+import ViewMessages from './pages/ViewMessages';
 
 const styles = {
   container: {
@@ -233,6 +235,13 @@ function Home() {
           <br />
           <a href="#all" style={styles.viewAllButton}>View All Photos</a>
 
+         {/* ----- الزراير الجديدة للرسايل ----- */}
+          <div style={{ marginTop: '20px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
+            <a href="#write" style={{...styles.uploadButton, width: '45%', fontSize: '14px', padding: '10px', margin: '0', textAlign: 'center', boxSizing: 'border-box', border: '2px solid transparent'}}>Write Note</a>
+            <a href="#messages" style={{...styles.galleryButton, width: '45%', fontSize: '14px', padding: '10px', margin: '0', textAlign: 'center', boxSizing: 'border-box'}}>View Notes</a>
+          </div>
+          {/* ---------------------------------- */}
+
           {status && <p style={styles.statusText}>{status}</p>}
         </div>
       </div>
@@ -251,6 +260,8 @@ function App() {
 
   if (route === '#all') return <Gallery />;
   if (route === '#admin') return <Admin />;
+  if (route === '#write') return <WriteMessage />;
+  if (route === '#messages') return <ViewMessages />;
   return <Home />;
 }
 
