@@ -40,10 +40,11 @@ export async function listPhotos() {
     storageTargets.map(async ({ client, bucket }) => {
       const { data, error } = await client.storage
         .from(bucket)
-        .list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+        .list('', { limit: 1000, sortBy: { column: 'created_at', order: 'desc' } });
       if (error || !data) return [];
+      // f.id == null ma3naha folder (zay thumbs/ el-adima) mesh file
       return data
-        .filter((f) => f.name && !f.name.startsWith('.'))
+        .filter((f) => f.name && !f.name.startsWith('.') && f.id)
         .map((f) => ({
           bucket,
           name: f.name,
@@ -85,7 +86,8 @@ export async function removeFavorite(photo) {
 
 export async function deletePhoto(photo) {
   const target = storageTargets.find((t) => t.bucket === photo.bucket);
-  const { error } = await target.client.storage.from(photo.bucket).remove([photo.name]);
+  // Bnemsa7 el-thumb ma3aha; law mesh mawgooda Supabase betetgahalha 3ady
+  const { error } = await target.client.storage.from(photo.bucket).remove([photo.name, `thumbs/${photo.name}`]);
   if (error) throw error;
   // Law kanet favorite, nemsa7ha men el-table kaman
   await supabaseA.from('favorites').delete().eq('bucket', photo.bucket).eq('name', photo.name);

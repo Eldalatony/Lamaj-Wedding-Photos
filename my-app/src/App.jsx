@@ -53,12 +53,11 @@ const styles = {
   card: {
     pointerEvents: 'auto',
     backgroundColor: CREAM,
-    padding: '52px 26px 38px 26px',
+    padding: 'clamp(40px, 11vw, 52px) clamp(20px, 6vw, 28px) clamp(28px, 8vw, 38px)',
     borderRadius: '170px 170px 26px 26px',
     border: `2px solid ${BLUE}`,
-    boxShadow: `inset 0 0 0 6px ${CREAM}, inset 0 0 0 8px ${BLUE}, 0 14px 40px rgba(37,99,235,0.35)`,
-    maxWidth: '380px',
-    width: '100%',
+    boxShadow: `inset 0 0 0 6px ${CREAM}, inset 0 0 0 8px ${BLUE}, 0 18px 50px rgba(37, 99, 235, 0.25)`,
+    width: 'min(85vw, 350px)',
   },
   subtitle: { color: BLUE, marginBottom: '24px', fontSize: '14px', lineHeight: '1.6', fontWeight: '600' },
   uploadButton: {
@@ -118,16 +117,11 @@ function makeSlots() {
   return slots;
 }
 
-// Kol guest leeh 20 sora bas (bene3edd 3ala nafs el-gehaz bel-localStorage)
-const UPLOAD_LIMIT = 20;
-const getUploadCount = () => parseInt(localStorage.getItem('uploadCount') || '0', 10);
-
 function Home() {
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState('');
   const [photos, setPhotos] = useState([]);
   const [favSet, setFavSet] = useState(new Set());
-  const [uploadsUsed, setUploadsUsed] = useState(getUploadCount);
 
   const slots = useMemo(() => makeSlots(), []);
 
@@ -154,33 +148,31 @@ function Home() {
   );
 
   const handleCameraUpload = async (e) => {
-    try {
-      const file = e.target.files[0];
-      if (!file) return;
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (files.length === 0) return;
 
-      if (getUploadCount() >= UPLOAD_LIMIT) {
-        setStatus(`You reached the limit of ${UPLOAD_LIMIT} photos. Thank you for sharing!`);
-        return;
+    let done = 0;
+
+    setUploading(true);
+    try {
+      for (const [i, file] of files.entries()) {
+        setStatus(files.length > 1 ? `Uploading ${i + 1} of ${files.length}...` : 'Uploading your memory...');
+
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${i}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+
+        await uploadPhoto(fileName, file);
+
+        done++;
       }
 
-      setUploading(true);
-      setStatus('Uploading your memory...');
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-
-      await uploadPhoto(fileName, file);
-
-      const used = getUploadCount() + 1;
-      localStorage.setItem('uploadCount', String(used));
-      setUploadsUsed(used);
-
       setStatus('Uploaded Successfully! Thank you!');
-      refreshPhotos();
     } catch (error) {
       console.error(error);
-      setStatus('Upload failed, please try again.');
+      setStatus(done > 0 ? `Uploaded ${done} of ${files.length}, then failed. Please try again.` : 'Upload failed, please try again.');
     } finally {
+      if (done > 0) refreshPhotos();
       setUploading(false);
     }
   };
@@ -213,26 +205,27 @@ function Home() {
           <h1 style={styles.title}>Loujan &amp; Leon</h1>
           <p style={styles.subtitle}>Capture a beautiful memory live and share it directly with the bride and groom!</p>
 
-          <label style={{ ...styles.uploadButton, opacity: uploading || uploadsUsed >= UPLOAD_LIMIT ? 0.6 : 1 }}>
-            {uploadsUsed >= UPLOAD_LIMIT ? 'Photo limit reached' : uploading ? 'Uploading...' : 'Take a Photo'}
+          <label style={{ ...styles.uploadButton, opacity: uploading ? 0.6 : 1 }}>
+            {uploading ? 'Uploading...' : 'Take a Photo'}
             <input
               type="file"
               accept="image/*"
               capture="environment"
               onChange={handleCameraUpload}
-              disabled={uploading || uploadsUsed >= UPLOAD_LIMIT}
+              disabled={uploading}
               style={{ display: 'none' }}
             />
           </label>
 
           <br />
-          <label style={{ ...styles.galleryButton, opacity: uploading || uploadsUsed >= UPLOAD_LIMIT ? 0.6 : 1 }}>
+          <label style={{ ...styles.galleryButton, opacity: uploading ? 0.6 : 1 }}>
             {uploading ? 'Uploading...' : 'Choose from Gallery'}
             <input
               type="file"
               accept="image/*"
+              multiple
               onChange={handleCameraUpload}
-              disabled={uploading || uploadsUsed >= UPLOAD_LIMIT}
+              disabled={uploading}
               style={{ display: 'none' }}
             />
           </label>

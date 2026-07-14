@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { listPhotos, favKey } from '../supabaseClient';
 import { BLUE, CREAM, PAGE_BACKGROUND } from '../theme';
 
@@ -37,6 +37,9 @@ const styles = {
     borderRadius: '3px',
     boxShadow: '0 6px 16px rgba(37,99,235,0.25)',
     cursor: 'pointer',
+    // El-browser byeskip el-render lel-cards elly barra el-shasha
+    contentVisibility: 'auto',
+    containIntrinsicSize: '260px 300px',
   },
   img: { display: 'block', width: '100%', aspectRatio: '1', objectFit: 'cover', backgroundColor: '#e8eefc' },
   empty: { textAlign: 'center', color: BLUE, fontWeight: '600', marginTop: '60px', fontSize: '17px' },
@@ -76,10 +79,16 @@ const styles = {
   },
 };
 
+// Benrender el-sowar 3ala batches 3ashan el-page teftah bsor3a
+// hatta law fi alaaf el-sowar
+const BATCH_SIZE = 60;
+
 function Gallery() {
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fullscreenPhoto, setFullscreenPhoto] = useState(null);
+  const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
+  const sentinelRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -92,6 +101,22 @@ function Gallery() {
       }
     })();
   }, []);
+
+  const hasMore = visibleCount < photos.length;
+
+  // Lamma el-sentinel yeban ta7t, benzawwed batch kaman
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) setVisibleCount((c) => c + BATCH_SIZE);
+      },
+      { rootMargin: '800px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore]);
 
   useEffect(() => {
     if (!fullscreenPhoto) return;
@@ -114,13 +139,16 @@ function Gallery() {
       ) : photos.length === 0 ? (
         <p style={styles.empty}>No photos yet — be the first to share a memory!</p>
       ) : (
-        <div style={styles.grid}>
-          {photos.map((photo) => (
-            <div key={favKey(photo)} style={styles.polaroid} onClick={() => setFullscreenPhoto(photo)}>
-              <img src={photo.url} alt="" loading="lazy" style={styles.img} />
-            </div>
-          ))}
-        </div>
+        <>
+          <div style={styles.grid}>
+            {photos.slice(0, visibleCount).map((photo) => (
+              <div key={favKey(photo)} style={styles.polaroid} onClick={() => setFullscreenPhoto(photo)}>
+                <img src={photo.url} alt="" loading="lazy" style={styles.img} />
+              </div>
+            ))}
+          </div>
+          {hasMore && <div ref={sentinelRef} style={{ height: '1px' }} />}
+        </>
       )}
 
       {fullscreenPhoto && (
