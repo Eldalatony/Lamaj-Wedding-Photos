@@ -1,31 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fetchMessages } from '../supabaseClient';
+import { BLUE, CREAM, PAGE_BACKGROUND } from '../theme';
 
 const styles = {
-  container: {
+  page: {
     minHeight: '100vh',
-    background: '#FAF6EE',
-    padding: '40px 20px',
-    fontFamily: "'Georgia', serif",
+    background: PAGE_BACKGROUND,
+    fontFamily: 'sans-serif',
+    padding: '20px',
+    paddingTop: '60px',
   },
-  header: {
-    textAlign: 'center',
-    marginBottom: '30px',
-  },
+  header: { textAlign: 'center', marginBottom: '40px' },
   title: {
-    color: '#182855',
-    fontSize: '32px',
-    fontFamily: "'Great Vibes', cursive, serif",
-    marginBottom: '15px',
+    fontFamily: "'Great Vibes', cursive",
+    fontSize: 'clamp(40px, 10vw, 60px)',
+    fontWeight: 'normal',
+    color: BLUE,
+    margin: '0 0 18px 0',
   },
   backButton: {
-    backgroundColor: '#182855',
+    display: 'inline-block',
+    backgroundColor: BLUE,
     color: 'white',
     padding: '10px 24px',
     borderRadius: '50px',
-    fontSize: '14px',
+    fontSize: '15px',
     fontWeight: 'bold',
     textDecoration: 'none',
+    boxShadow: '0 4px 14px rgba(37,99,235,0.35)',
   },
   grid: {
     display: 'grid',
@@ -35,58 +37,67 @@ const styles = {
     margin: '0 auto',
   },
   noteCard: {
-    backgroundColor: '#FFFDF9',
+    position: 'relative',
+    backgroundColor: CREAM,
     padding: '20px',
     borderRadius: '10px',
-    border: '1px solid #182855',
-    boxShadow: '0 4px 10px rgba(24,40,85,0.1)',
-    position: 'relative',
+    border: `2px solid ${BLUE}`,
+    boxShadow: '0 6px 16px rgba(37,99,235,0.25)',
   },
   noteText: {
-    color: '#182855',
+    color: BLUE,
     fontSize: '16px',
     lineHeight: '1.6',
-    whiteSpace: 'pre-wrap', // عشان يعرض المسافات والسطور صح
+    margin: 0,
+    whiteSpace: 'pre-wrap',
   },
   pin: {
     position: 'absolute',
-    top: '-10px',
+    top: '-12px',
     left: '50%',
     transform: 'translateX(-50%)',
     fontSize: '20px',
-  }
+  },
+  empty: { textAlign: 'center', color: BLUE, fontWeight: '600', marginTop: '60px', fontSize: '17px' },
 };
 
 export default function ViewMessages() {
   const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadMessages = async () => {
+    (async () => {
       try {
-        const data = await fetchMessages();
-        setMessages(data);
+        setMessages(await fetchMessages());
       } catch (error) {
         console.error('Error fetching messages:', error);
+      } finally {
+        setLoading(false);
       }
-    };
-    loadMessages();
+    })();
   }, []);
 
   return (
-    <div style={styles.container}>
+    <div style={styles.page}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Guestbook Notes 🍋</h1>
-        <a href="#" style={styles.backButton}>Back to Home</a>
+        <h1 style={styles.title}>Guestbook Notes</h1>
+        <a href="#" style={styles.backButton}>← Back to Home</a>
       </div>
-      
-      <div style={styles.grid}>
-        {messages.map((msg, idx) => (
-          <div key={idx} style={styles.noteCard}>
-            <div style={styles.pin}>📌</div>
-            <p style={styles.noteText}>{msg.text}</p>
-          </div>
-        ))}
-      </div>
+
+      {loading ? (
+        <p style={styles.empty}>Loading notes...</p>
+      ) : messages.length === 0 ? (
+        <p style={styles.empty}>No notes yet — be the first to leave one!</p>
+      ) : (
+        <div style={styles.grid}>
+          {messages.map((msg, idx) => (
+            <div key={idx} style={styles.noteCard}>
+              <div style={styles.pin}>📌</div>
+              <p style={styles.noteText}>{msg.text}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

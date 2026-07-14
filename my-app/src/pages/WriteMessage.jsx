@@ -1,76 +1,75 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { addMessage } from '../supabaseClient';
+import { YELLOW, BLUE, CREAM, PAGE_BACKGROUND } from '../theme';
 
 const styles = {
-  container: {
+  page: {
     minHeight: '100vh',
-    background: '#FAF6EE',
+    background: PAGE_BACKGROUND,
+    fontFamily: 'sans-serif',
     display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     padding: '20px',
-    fontFamily: "'Georgia', serif",
   },
   card: {
-    backgroundColor: '#FFFDF9',
-    padding: '40px 25px',
-    borderRadius: '15px',
-    border: '3px double #182855',
-    boxShadow: '0 15px 35px rgba(24,40,85,0.2)',
+    backgroundColor: CREAM,
+    border: `2px solid ${BLUE}`,
+    borderRadius: '20px',
+    padding: '30px 25px',
     width: '100%',
     maxWidth: '400px',
     textAlign: 'center',
+    boxShadow: '0 10px 30px rgba(37,99,235,0.25)',
   },
   title: {
-    color: '#182855',
-    fontSize: '24px',
-    marginBottom: '20px',
-    fontFamily: "'Great Vibes', cursive, serif",
+    fontFamily: "'Great Vibes', cursive",
+    fontSize: 'clamp(32px, 9vw, 42px)',
+    fontWeight: 'normal',
+    color: BLUE,
+    margin: '0 0 20px 0',
   },
   textarea: {
     width: '100%',
     height: '150px',
     padding: '15px',
     borderRadius: '10px',
-    border: '1px solid #182855',
+    border: `2px solid ${BLUE}`,
     fontSize: '16px',
     marginBottom: '20px',
     boxSizing: 'border-box',
     resize: 'none',
-    backgroundColor: '#FAF6EE',
+    backgroundColor: 'white',
+    color: '#1f2937',
+    outline: 'none',
   },
-  button: {
-    backgroundColor: '#FFD000',
-    color: '#182855',
+  sendButton: {
+    backgroundColor: YELLOW,
+    color: BLUE,
     padding: '12px 24px',
     borderRadius: '50px',
     fontSize: '16px',
     fontWeight: 'bold',
     cursor: 'pointer',
-    border: '2px solid #182855',
+    border: 'none',
     width: '100%',
-    marginBottom: '10px',
+    marginBottom: '12px',
+    boxShadow: '0 6px 20px rgba(255,212,0,0.5)',
   },
   backButton: {
-    backgroundColor: 'transparent',
-    color: '#182855',
+    display: 'inline-block',
+    backgroundColor: 'white',
+    color: BLUE,
+    border: `2px solid ${BLUE}`,
     padding: '10px 24px',
     borderRadius: '50px',
     fontSize: '14px',
     fontWeight: 'bold',
-    cursor: 'pointer',
-    border: '2px solid #182855',
     textDecoration: 'none',
-    display: 'inline-block',
     width: '100%',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box',
   },
-  status: {
-    marginTop: '10px',
-    color: '#182855',
-    fontWeight: 'bold',
-  }
+  status: { marginTop: '14px', color: BLUE, fontWeight: '600' },
 };
 
 export default function WriteMessage() {
@@ -85,7 +84,7 @@ export default function WriteMessage() {
     try {
       await addMessage(text);
       setStatus('Message sent successfully! 💛');
-      setText(''); // نفضي المربع
+      setText('');
     } catch (error) {
       console.error(error);
       setStatus('Failed to send, try again.');
@@ -95,9 +94,9 @@ export default function WriteMessage() {
   };
 
   return (
-    <div style={styles.container}>
+    <div style={styles.page}>
       <div style={styles.card}>
-        <h2 style={styles.title}>Leave a Note for Loujan & Leon</h2>
+        <h1 style={styles.title}>Leave a Note for Loujan &amp; Leon</h1>
         <textarea
           style={styles.textarea}
           placeholder="Write your wishes here..."
@@ -105,10 +104,14 @@ export default function WriteMessage() {
           onChange={(e) => setText(e.target.value)}
           disabled={loading}
         />
-        <button style={styles.button} onClick={handleSubmit} disabled={loading || !text.trim()}>
+        <button
+          style={{ ...styles.sendButton, opacity: loading || !text.trim() ? 0.6 : 1 }}
+          onClick={handleSubmit}
+          disabled={loading || !text.trim()}
+        >
           {loading ? 'Sending...' : 'Send Message'}
         </button>
-        <a href="#" style={styles.backButton}>Back to Home</a>
+        <a href="#" style={styles.backButton}>← Back to Home</a>
         {status && <p style={styles.status}>{status}</p>}
       </div>
     </div>

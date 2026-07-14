@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { listPhotos, favKey } from '../supabaseClient';
+import ThumbImage from '../ThumbImage';
 import { BLUE, CREAM, PAGE_BACKGROUND } from '../theme';
 
 const styles = {
@@ -37,7 +38,6 @@ const styles = {
     borderRadius: '3px',
     boxShadow: '0 6px 16px rgba(37,99,235,0.25)',
     cursor: 'pointer',
-    // El-browser byeskip el-render lel-cards elly barra el-shasha
     contentVisibility: 'auto',
     containIntrinsicSize: '260px 300px',
   },
@@ -79,8 +79,6 @@ const styles = {
   },
 };
 
-// Benrender el-sowar 3ala batches 3ashan el-page teftah bsor3a
-// hatta law fi alaaf el-sowar
 const BATCH_SIZE = 60;
 
 function Gallery() {
@@ -104,7 +102,6 @@ function Gallery() {
 
   const hasMore = visibleCount < photos.length;
 
-  // Lamma el-sentinel yeban ta7t, benzawwed batch kaman
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -143,7 +140,7 @@ function Gallery() {
           <div style={styles.grid}>
             {photos.slice(0, visibleCount).map((photo) => (
               <div key={favKey(photo)} style={styles.polaroid} onClick={() => setFullscreenPhoto(photo)}>
-                <img src={photo.url} alt="" loading="lazy" style={styles.img} />
+                <ThumbImage photo={photo} style={styles.img} />
               </div>
             ))}
           </div>
